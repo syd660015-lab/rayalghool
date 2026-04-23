@@ -568,20 +568,26 @@ export default function App() {
                     <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">النموذج المرجعي</span>
                     <FileText size={14} className="text-slate-400" />
                   </div>
-                  <div className="flex-1 p-4 flex items-center justify-center bg-white">
-                    <img 
-                      src={figureType === 'A' ? "/figure_a.png" : "/figure_b.png"} 
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        if (figureType === 'A') {
-                          target.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Figure_Complexe_de_Rey-Osterrieth.svg/1200px-Figure_Complexe_de_Rey-Osterrieth.svg.png";
-                        } else {
-                          target.src = "https://www.psychol-ok.com/images/tests/rey_complex_figure_b.jpg";
-                        }
-                      }}
-                      alt={`Rey Figure ${figureType}`} 
-                      className="w-full h-auto opacity-90 hover:opacity-100 transition-opacity"
-                    />
+                  <div className="flex-1 p-4 flex items-center justify-center bg-white min-h-[300px]">
+                    <div className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden rounded-lg border border-slate-50 shadow-inner bg-slate-50/50">
+                      <img 
+                        src={figureType === 'A' ? "/figure_a.png" : "/figure_b.png"} 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (figureType === 'A') {
+                            target.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Figure_Complexe_de_Rey-Osterrieth.svg/1200px-Figure_Complexe_de_Rey-Osterrieth.svg.png";
+                          } else {
+                            target.src = "https://www.psychol-ok.com/images/tests/rey_complex_figure_b.jpg";
+                          }
+                        }}
+                        alt={`Rey Figure ${figureType}`} 
+                        className="max-w-full max-h-full w-auto h-auto object-contain transition-all duration-500 scale-95 hover:scale-100"
+                        id="reference-figure-img"
+                      />
+                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/80 backdrop-blur-sm rounded-md text-[8px] font-bold text-slate-400 uppercase tracking-tighter border border-slate-100">
+                        نموذج مرجعي معتمد
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
