@@ -61,7 +61,10 @@ export async function analyzeExaminerNotes(notes: string[]): Promise<AnalysisRes
     });
 
     if (response.text) {
-      return JSON.parse(response.text.trim()) as AnalysisResult;
+      const cleanText = response.text.trim()
+        .replace(/^```json\n?/, "")
+        .replace(/\n?```$/, "");
+      return JSON.parse(cleanText) as AnalysisResult;
     }
     throw new Error("No response from AI");
   } catch (error) {

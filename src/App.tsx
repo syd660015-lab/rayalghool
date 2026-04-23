@@ -135,6 +135,25 @@ export default function App() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const handleFigureTypeChange = (type: FigureType) => {
+    if (Object.keys(copyScores).length > 0 || Object.keys(memoryScores).length > 0) {
+      if (confirm('تغيير النموذج سيؤدي لمسح التقيمات الحالية. هل تريد الاستمرار؟')) {
+        setFigureType(type);
+        setCopyScores({});
+        setMemoryScores({});
+        setNoteValues({});
+        setAnalysis(null);
+        setCopyImage(null);
+        setMemoryImage(null);
+        setCopyTime(0);
+        setMemoryTime(0);
+        setSeconds(0);
+      }
+    } else {
+      setFigureType(type);
+    }
+  };
+
   const startTest = (nextPhase: TestPhase) => {
     setPhase(nextPhase);
     setSeconds(0);
@@ -183,7 +202,11 @@ export default function App() {
       setSeconds(0);
       setIsActive(false);
       setPhase('instructions');
-      localStorage.clear();
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('rcft_')) {
+          localStorage.removeItem(key);
+        }
+      });
     }
   };
 
@@ -330,13 +353,13 @@ export default function App() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">اختر نوع النموذج للاختبار</label>
               <div className="flex gap-4">
                 <button 
-                  onClick={() => setFigureType('A')}
+                  onClick={() => handleFigureTypeChange('A')}
                   className={`px-8 py-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${figureType === 'A' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-md' : 'border-slate-100 bg-white text-slate-400 opacity-60 hover:opacity-100'}`}
                 >
                   <span className="text-2xl font-black">Model A</span>
                 </button>
                 <button 
-                  onClick={() => setFigureType('B')}
+                  onClick={() => handleFigureTypeChange('B')}
                   className={`px-8 py-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${figureType === 'B' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-md' : 'border-slate-100 bg-white text-slate-400 opacity-60 hover:opacity-100'}`}
                 >
                   <span className="text-2xl font-black">Model B</span>
@@ -568,12 +591,18 @@ export default function App() {
                     <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">النموذج المرجعي</span>
                     <FileText size={14} className="text-slate-400" />
                   </div>
-                  <div className="flex-1 p-4 flex items-center justify-center bg-white min-h-[300px]">
-                    <div className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden rounded-lg border border-slate-50 shadow-inner bg-slate-50/50">
+                  <div className="flex-1 p-4 flex items-center justify-center bg-white min-h-[350px]">
+                    <div className="relative w-full h-full min-h-[300px] flex items-center justify-center overflow-hidden rounded-lg border border-slate-100 shadow-inner bg-slate-50/50">
                       <img 
-                        src={figureType === 'A' ? "/figure_a.png" : "/figure_b.png"} 
+                        src={figureType === 'A' ? "https://i.ibb.co/nscS0sxy/figure-a.png" : "https://i.ibb.co/0jNpxVMR/figure-b.png"} 
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
+                          // Fallback to second guess for direct links
+                          if (target.src.includes("figure-a.png")) {
+                             target.src = "https://i.ibb.co/nscS0sxy/image.png";
+                             return;
+                          }
+                          // Final fallbacks
                           if (figureType === 'A') {
                             target.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Figure_Complexe_de_Rey-Osterrieth.svg/1200px-Figure_Complexe_de_Rey-Osterrieth.svg.png";
                           } else {
@@ -581,10 +610,10 @@ export default function App() {
                           }
                         }}
                         alt={`Rey Figure ${figureType}`} 
-                        className="max-w-full max-h-full w-auto h-auto object-contain transition-all duration-500 scale-95 hover:scale-100"
+                        className="max-w-full max-h-full w-auto h-auto object-contain transition-all duration-500 hover:scale-105"
                         id="reference-figure-img"
                       />
-                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/80 backdrop-blur-sm rounded-md text-[8px] font-bold text-slate-400 uppercase tracking-tighter border border-slate-100">
+                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-md text-[8px] font-bold text-slate-400 uppercase tracking-tighter border border-slate-100 shadow-sm">
                         نموذج مرجعي معتمد
                       </div>
                     </div>
@@ -663,15 +692,24 @@ export default function App() {
                 <span className="text-xs font-mono text-slate-400">التتبع الملون مفعل</span>
               </div>
               <div className="sleek-card p-2 bg-slate-100 shadow-inner relative group">
-                <img src={copyImage!} alt="Copy phase" className="w-full h-64 object-contain rounded-2xl bg-white" />
-                <button 
-                  onClick={() => downloadImage(copyImage, `rey_figure_${figureType}_copy.png`)}
-                  className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-indigo-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
-                  title="تحميل رسم النقل"
-                >
-                  <Download size={14} />
-                  تحميل PNG
-                </button>
+                {copyImage ? (
+                  <img src={copyImage} alt="Copy phase" className="w-full h-64 object-contain rounded-2xl bg-white" />
+                ) : (
+                  <div className="w-full h-64 rounded-2xl bg-white flex flex-col items-center justify-center text-slate-300">
+                    <Info size={48} className="mb-2 opacity-20" />
+                    <span className="text-xs font-bold">لم يتم رسم مرحلة النقل</span>
+                  </div>
+                )}
+                {copyImage && (
+                  <button 
+                    onClick={() => downloadImage(copyImage, `rey_figure_${figureType}_copy.png`)}
+                    className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-indigo-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
+                    title="تحميل رسم النقل"
+                  >
+                    <Download size={14} />
+                    تحميل PNG
+                  </button>
+                )}
               </div>
             </div>
             <div className="space-y-3">
@@ -679,15 +717,24 @@ export default function App() {
                 <span className="text-[10px] font-extrabold text-purple-500 uppercase tracking-widest bg-purple-50 px-3 py-1 rounded-full border border-purple-100">رسم مرحلة التذكر</span>
               </div>
               <div className="sleek-card p-2 bg-slate-100 shadow-inner relative group">
-                <img src={memoryImage!} alt="Memory phase" className="w-full h-64 object-contain rounded-2xl bg-white" />
-                <button 
-                  onClick={() => downloadImage(memoryImage, `rey_figure_${figureType}_memory.png`)}
-                  className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-purple-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
-                  title="تحميل رسم التذكر"
-                >
-                  <Download size={14} />
-                  تحميل PNG
-                </button>
+                {memoryImage ? (
+                  <img src={memoryImage} alt="Memory phase" className="w-full h-64 object-contain rounded-2xl bg-white" />
+                ) : (
+                  <div className="w-full h-64 rounded-2xl bg-white flex flex-col items-center justify-center text-slate-300">
+                    <Info size={48} className="mb-2 opacity-20" />
+                    <span className="text-xs font-bold">لم يتم رسم مرحلة التذكر</span>
+                  </div>
+                )}
+                {memoryImage && (
+                  <button 
+                    onClick={() => downloadImage(memoryImage, `rey_figure_${figureType}_memory.png`)}
+                    className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-purple-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
+                    title="تحميل رسم التذكر"
+                  >
+                    <Download size={14} />
+                    تحميل PNG
+                  </button>
+                )}
               </div>
             </div>
           </div>
