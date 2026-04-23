@@ -23,7 +23,8 @@ import {
   LogOut,
   MousePointer2,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Download
 } from 'lucide-react';
 import DrawingCanvas, { CanvasHandle } from './components/DrawingCanvas';
 import { FigureIcon } from './components/FigureIcon';
@@ -48,12 +49,73 @@ export default function App() {
   
   const [copyImage, setCopyImage] = useState<string | null>(null);
   const [memoryImage, setMemoryImage] = useState<string | null>(null);
-  const [scores, setScores] = useState<Record<number, number>>({});
+  const [copyScores, setCopyScores] = useState<Record<number, number>>({});
+  const [memoryScores, setMemoryScores] = useState<Record<number, number>>({});
+  const [copyTime, setCopyTime] = useState(0);
+  const [memoryTime, setMemoryTime] = useState(0);
+  const [copyStrategy, setCopyStrategy] = useState<number | null>(null);
+  const [activeScoringTab, setActiveScoringTab] = useState<'copy' | 'memory'>('copy');
   const [noteValues, setNoteValues] = useState<Record<number, string>>({});
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const canvasRef = useRef<CanvasHandle>(null);
+
+  // Load from Local Storage on mount
+  useEffect(() => {
+    const savedCopyScores = localStorage.getItem('rcft_copy_scores');
+    const savedMemoryScores = localStorage.getItem('rcft_memory_scores');
+    const savedNotes = localStorage.getItem('rcft_notes');
+    const savedFigureType = localStorage.getItem('rcft_figure_type');
+    const savedAnalysis = localStorage.getItem('rcft_analysis');
+    const savedStrategy = localStorage.getItem('rcft_copy_strategy');
+    const savedCopyTime = localStorage.getItem('rcft_copy_time');
+    const savedMemoryTime = localStorage.getItem('rcft_memory_time');
+
+    if (savedCopyScores) setCopyScores(JSON.parse(savedCopyScores));
+    if (savedMemoryScores) setMemoryScores(JSON.parse(savedMemoryScores));
+    if (savedNotes) setNoteValues(JSON.parse(savedNotes));
+    if (savedFigureType) setFigureType(savedFigureType as FigureType);
+    if (savedAnalysis) setAnalysis(JSON.parse(savedAnalysis));
+    if (savedStrategy) setCopyStrategy(Number(savedStrategy));
+    if (savedCopyTime) setCopyTime(Number(savedCopyTime));
+    if (savedMemoryTime) setMemoryTime(Number(savedMemoryTime));
+  }, []);
+
+  // Save to Local Storage on changes
+  useEffect(() => {
+    localStorage.setItem('rcft_copy_scores', JSON.stringify(copyScores));
+  }, [copyScores]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_memory_scores', JSON.stringify(memoryScores));
+  }, [memoryScores]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_copy_strategy', String(copyStrategy));
+  }, [copyStrategy]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_copy_time', String(copyTime));
+  }, [copyTime]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_memory_time', String(memoryTime));
+  }, [memoryTime]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_notes', JSON.stringify(noteValues));
+  }, [noteValues]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_figure_type', figureType);
+  }, [figureType]);
+
+  useEffect(() => {
+    if (analysis) {
+      localStorage.setItem('rcft_analysis', JSON.stringify(analysis));
+    }
+  }, [analysis]);
 
   useEffect(() => {
     let interval: any = null;
@@ -77,16 +139,24 @@ export default function App() {
     setPhase(nextPhase);
     setSeconds(0);
     setIsActive(true);
+    // Clear canvas for new phase
+    setTimeout(() => {
+      canvasRef.current?.clear();
+    }, 100);
   };
 
   const handleNextPhase = () => {
     const dataUrl = canvasRef.current?.getDataUrl();
     if (phase === 'copy') {
       setCopyImage(dataUrl || null);
+      setCopyTime(seconds);
       setIsActive(false);
       setSeconds(0); // Reset for memory phase
+      // We don't automatically go to memory, the user clicks "Start Memory Phase" in instructions
+      setPhase('instructions');
     } else if (phase === 'memory') {
       setMemoryImage(dataUrl || null);
+      setMemoryTime(seconds);
       setIsActive(false);
       setPhase('results');
     }
@@ -97,6 +167,34 @@ export default function App() {
     const result = await analyzeExaminerNotes(Object.values(noteValues));
     setAnalysis(result);
     setIsAnalyzing(false);
+  };
+
+  const clearAllData = () => {
+    if (confirm('هل أنت متأكد من مسح جميع البيانات المخزنة؟')) {
+      setCopyScores({});
+      setMemoryScores({});
+      setNoteValues({});
+      setAnalysis(null);
+      setCopyImage(null);
+      setMemoryImage(null);
+      setCopyTime(0);
+      setMemoryTime(0);
+      setCopyStrategy(null);
+      setSeconds(0);
+      setIsActive(false);
+      setPhase('instructions');
+      localStorage.clear();
+    }
+  };
+
+  const downloadImage = (dataUrl: string | null, filename: string) => {
+    if (!dataUrl) return;
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const Header = () => (
@@ -114,6 +212,13 @@ export default function App() {
         </div>
       </div>
       <div className="flex items-center gap-6">
+        <button 
+          onClick={clearAllData}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all text-xs font-bold"
+        >
+          <RotateCcw size={14} />
+          مسح البيانات
+        </button>
         <div className="text-right hidden sm:block">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">المفحوص</p>
           <p className="font-semibold text-slate-700 flex items-center gap-2">
@@ -551,16 +656,32 @@ export default function App() {
                 <span className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">رسم مرحلة النقل المباشر</span>
                 <span className="text-xs font-mono text-slate-400">التتبع الملون مفعل</span>
               </div>
-              <div className="sleek-card p-2 bg-slate-100 shadow-inner">
+              <div className="sleek-card p-2 bg-slate-100 shadow-inner relative group">
                 <img src={copyImage!} alt="Copy phase" className="w-full h-64 object-contain rounded-2xl bg-white" />
+                <button 
+                  onClick={() => downloadImage(copyImage, `rey_figure_${figureType}_copy.png`)}
+                  className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-indigo-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
+                  title="تحميل رسم النقل"
+                >
+                  <Download size={14} />
+                  تحميل PNG
+                </button>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold text-purple-500 uppercase tracking-widest bg-purple-50 px-3 py-1 rounded-full border border-purple-100">رسم مرحلة التذكر</span>
               </div>
-              <div className="sleek-card p-2 bg-slate-100 shadow-inner">
+              <div className="sleek-card p-2 bg-slate-100 shadow-inner relative group">
                 <img src={memoryImage!} alt="Memory phase" className="w-full h-64 object-contain rounded-2xl bg-white" />
+                <button 
+                  onClick={() => downloadImage(memoryImage, `rey_figure_${figureType}_memory.png`)}
+                  className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-purple-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
+                  title="تحميل رسم التذكر"
+                >
+                  <Download size={14} />
+                  تحميل PNG
+                </button>
               </div>
             </div>
           </div>
@@ -583,10 +704,11 @@ export default function App() {
                 ].map(type => (
                   <button 
                     key={type.id}
-                    className="p-3 rounded-2xl border-2 border-slate-50 hover:border-indigo-100 hover:bg-slate-50 transition-all text-right group"
+                    onClick={() => setCopyStrategy(type.id)}
+                    className={`p-3 rounded-2xl border-2 transition-all text-right group ${copyStrategy === type.id ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-slate-50 hover:border-indigo-100 hover:bg-slate-50'}`}
                   >
-                    <p className="text-xs font-bold text-slate-700 mb-1 group-hover:text-indigo-600">{type.label}</p>
-                    <p className="text-[10px] text-slate-400 leading-tight">{type.desc}</p>
+                    <p className={`text-xs font-bold mb-1 transition-colors ${copyStrategy === type.id ? 'text-indigo-700' : 'text-slate-700 group-hover:text-indigo-600'}`}>{type.label}</p>
+                    <p className={`text-[10px] leading-tight transition-colors ${copyStrategy === type.id ? 'text-indigo-500' : 'text-slate-400'}`}>{type.desc}</p>
                   </button>
                 ))}
               </div>
@@ -598,11 +720,11 @@ export default function App() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
                     <span className="text-xs opacity-60">زمن النقل</span>
-                    <span className="font-mono font-bold text-indigo-400">{formatTime(seconds)}</span>
+                    <span className="font-mono font-bold text-indigo-400">{formatTime(copyTime)}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10 opacity-50">
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
                     <span className="text-xs opacity-60">زمن التذكر</span>
-                    <span className="font-mono font-bold">--:--</span>
+                    <span className="font-mono font-bold text-purple-400">{formatTime(memoryTime)}</span>
                   </div>
                 </div>
               </div>
@@ -613,22 +735,41 @@ export default function App() {
           </div>
 
           <div className="sleek-card overflow-hidden">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center text-indigo-600">
-                  <ClipboardCheck size={24} />
+            <div className="p-8 border-b border-slate-100 flex flex-col gap-6 bg-slate-50/30">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center text-indigo-600">
+                    <ClipboardCheck size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">دليل التنقيط المعياري</h3>
+                    <p className="text-xs text-slate-400 font-medium">نقطتان: وضع صحيح، نقطة: تشوه بسيط، نصف: وضع خاطئ، صفر: غياب</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold">دليل التنقيط المعياري</h3>
-                  <p className="text-xs text-slate-400 font-medium">نقطتان: وضع صحيح، نقطة: تشوه بسيط، نصف: وضع خاطئ، صفر: غياب</p>
+                <div className="text-left">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">الدرجة الكلية ({figureType} - {activeScoringTab === 'copy' ? 'نقل' : 'تذكر'})</p>
+                  <div className={`flex items-baseline gap-1 ${activeScoringTab === 'copy' ? 'text-indigo-600' : 'text-purple-600'}`}>
+                    <span className="text-4xl font-extrabold">
+                      {(Object.values(activeScoringTab === 'copy' ? copyScores : memoryScores) as number[]).reduce((a, b) => a + b, 0).toFixed(1)}
+                    </span>
+                    <span className="text-sm font-bold opacity-60">/ {figureType === 'A' ? '36.0' : '22.0'}</span>
+                  </div>
                 </div>
               </div>
-              <div className="text-left">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">الدرجة الكلية ({figureType})</p>
-                <div className="flex items-baseline gap-1 text-indigo-600">
-                  <span className="text-4xl font-extrabold">{(Object.values(scores) as number[]).reduce((a, b) => a + b, 0).toFixed(1)}</span>
-                  <span className="text-sm font-bold opacity-60">/ {figureType === 'A' ? '36.0' : '22.0'}</span>
-                </div>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setActiveScoringTab('copy')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border-2 ${activeScoringTab === 'copy' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+                >
+                  تقييم مرحلة النقل
+                </button>
+                <button 
+                  onClick={() => setActiveScoringTab('memory')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border-2 ${activeScoringTab === 'memory' ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+                >
+                  تقييم مرحلة التذكر
+                </button>
               </div>
             </div>
 
@@ -639,7 +780,7 @@ export default function App() {
                     <th className="px-6 py-4 w-16 text-center">ID</th>
                     <th className="px-4 py-4 w-20 text-center">الشكل</th>
                     <th className="px-6 py-4">العنصر البنيوي</th>
-                    <th className="px-6 py-4 text-center">تقييم الجودة والمكان</th>
+                    <th className="px-6 py-4 text-center">تقييم الجودة والمكان ({activeScoringTab === 'copy' ? 'نقل' : 'تذكر'})</th>
                     <th className="px-6 py-4">ملاحظات الفاحص</th>
                   </tr>
                 </thead>
@@ -658,10 +799,13 @@ export default function App() {
                           {[0, 0.5, 1, 2].map(score => (
                             <button
                               key={score}
-                              onClick={() => setScores(prev => ({ ...prev, [el.id]: score }))}
+                              onClick={() => {
+                                const setter = activeScoringTab === 'copy' ? setCopyScores : setMemoryScores;
+                                setter(prev => ({ ...prev, [el.id]: score }));
+                              }}
                               className={`w-10 h-10 rounded-xl text-xs font-bold transition-all border-2 ${
-                                scores[el.id] === score 
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md transform scale-110' 
+                                (activeScoringTab === 'copy' ? copyScores[el.id] : memoryScores[el.id]) === score 
+                                ? (activeScoringTab === 'copy' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-purple-600 text-white border-purple-600 shadow-md') + ' transform scale-110' 
                                 : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
                               }`}
                             >
@@ -757,12 +901,20 @@ export default function App() {
             </div>
 
             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-10">
                 <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">الخلاصة الرقمية</p>
-                  <p className="text-3xl font-extrabold flex items-center gap-2">
-                    {(Object.values(scores) as number[]).reduce((a, b) => a + b, 0).toFixed(1)}
-                    <span className="text-sm opacity-40">درجة خام</span>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">إجمالي النقل</p>
+                  <p className="text-3xl font-extrabold text-indigo-400">
+                    {(Object.values(copyScores) as number[]).reduce((a, b) => a + b, 0).toFixed(1)}
+                    <span className="text-xs opacity-40 mr-1">درجة</span>
+                  </p>
+                </div>
+                <div className="h-10 w-px bg-slate-800"></div>
+                <div>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">إجمالي التذكر</p>
+                  <p className="text-3xl font-extrabold text-purple-400">
+                    {(Object.values(memoryScores) as number[]).reduce((a, b) => a + b, 0).toFixed(1)}
+                    <span className="text-xs opacity-40 mr-1">درجة</span>
                   </p>
                 </div>
                 <div className="h-10 w-px bg-slate-800"></div>
