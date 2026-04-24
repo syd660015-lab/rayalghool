@@ -143,6 +143,7 @@ export const ClinicalReport: React.FC<ClinicalReportProps> = ({
               <div>
                 <h1 className="text-3xl font-black text-slate-900 mb-2">تقرير اختبار ري للأشكال المعقدة (RCFT)</h1>
                 <p className="text-slate-500 font-medium">النموذج المستخدم: الشكل ({figureType})</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-2">إعداد: د.أحمد حمدي عاشور الغول</p>
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-2 justify-end text-slate-600 mb-1">
@@ -345,6 +346,9 @@ export const ClinicalReport: React.FC<ClinicalReportProps> = ({
               <div className="space-y-4">
                 <div className="h-0.5 w-48 bg-slate-300"></div>
                 <p className="text-sm font-bold text-slate-500 text-center">توقيع الفاحص</p>
+                <div className="text-[9px] text-slate-400 text-center pt-2 font-bold">
+                  إعداد وبرمجة: دكتور.أحمد حمدي عاشور الغول
+                </div>
               </div>
               <div className="text-left text-[10px] text-slate-400 font-mono">
                 RCFT ANALYTICS v1.0.0<br />

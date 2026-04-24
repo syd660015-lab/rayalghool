@@ -62,7 +62,11 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
     },
     getSVGData: () => {
       const svgPaths = paths.map(path => {
-        if (path.points.length < 2) return '';
+        if (path.points.length === 0) return '';
+        if (path.points.length === 1) {
+          const p = path.points[0];
+          return `<circle cx="${p.x}" cy="${p.y}" r="${path.width / 2}" fill="${path.color}" />`;
+        }
         const d = `M ${path.points[0].x} ${path.points[0].y} ` + 
                   path.points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
         return `<path d="${d}" stroke="${path.color}" stroke-width="${path.width}" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;

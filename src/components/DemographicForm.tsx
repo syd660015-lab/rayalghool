@@ -252,12 +252,16 @@ export function DemographicForm({ data, onChange, onComplete, onBack }: Demograp
 
         <button 
           onClick={onComplete}
-          disabled={!data.name || !data.gender || !data.handedness}
+          disabled={!data.name || !data.gender || !data.handedness || !data.birthDate.year}
           className="sleek-button-primary px-10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span>تأكيد البيانات والبدء</span>
           <ArrowLeft size={20} />
         </button>
+      </div>
+
+      <div className="text-center py-4 opacity-40">
+        <p className="text-[9px] font-bold uppercase tracking-tight">إعداد وبرمجة: د.أحمد حمدي عاشور الغول</p>
       </div>
     </motion.div>
   );

@@ -220,11 +220,11 @@ export default function App() {
   };
 
   const startTest = (nextPhase: TestPhase) => {
-    // Calculate age if birth year is present and age is default or empty
-    if (patientInfo.birthDate.year && (!patientInfo.age || patientInfo.age === '12')) {
+    // Calculate age if birth year is present
+    if (patientInfo.birthDate.year) {
       const currentYear = new Date().getFullYear();
       const calculatedAge = currentYear - parseInt(patientInfo.birthDate.year);
-      if (!isNaN(calculatedAge)) {
+      if (!isNaN(calculatedAge) && calculatedAge > 0) {
         setPatientInfo(prev => ({ ...prev, age: String(calculatedAge) }));
       }
     }
@@ -367,7 +367,7 @@ export default function App() {
             </span>
             <span className="text-[10px] text-slate-400">سنة</span>
             <User size={14} className="text-slate-400" />
-            {phase === 'instructions' && !isActive && (
+            {(phase === 'instructions' || phase === 'results') && !isActive && (
               <button 
                 onClick={() => setPhase('demographics')}
                 className="ml-2 p-1 hover:bg-slate-100 rounded-lg text-indigo-600 transition-colors"
@@ -408,6 +408,11 @@ export default function App() {
           onComplete={() => startTest('copy')}
         />
       </motion.main>
+      <footer className="p-4 bg-white border-t border-slate-100 text-center shrink-0">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+          إعداد وبرمجة: دكتور.أحمد حمدي عاشور الغول ـ دكتوراه في علم النفس التربوي وخبير مايكروسوفت لتكنولوجيا المعلومات
+        </p>
+      </footer>
     </div>
   );
 
@@ -559,6 +564,11 @@ export default function App() {
           </div>
         </div>
       </motion.main>
+      <footer className="p-4 bg-white border-t border-slate-100 text-center shrink-0">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+          إعداد وبرمجة: دكتور.أحمد حمدي عاشور الغول ـ دكتوراه في علم النفس التربوي وخبير مايكروسوفت لتكنولوجيا المعلومات
+        </p>
+      </footer>
     </div>
   );
 
@@ -1192,6 +1202,11 @@ export default function App() {
           </div>
         </div>
       </motion.main>
+      <footer className="p-4 bg-white border-t border-slate-100 text-center shrink-0">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+          إعداد وبرمجة: دكتور.أحمد حمدي عاشور الغول ـ دكتوراه في علم النفس التربوي وخبير مايكروسوفت لتكنولوجيا المعلومات
+        </p>
+      </footer>
     </div>
   );
 
