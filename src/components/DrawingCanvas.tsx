@@ -11,6 +11,7 @@ export interface CanvasHandle {
   clear: () => void;
   undo: () => void;
   getDataUrl: () => string;
+  getSVGData: () => string;
 }
 
 const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lineWidth, width = 800, height = 600 }, ref) => {
@@ -43,6 +44,20 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
     },
     getDataUrl: () => {
       return canvasRef.current?.toDataURL() || '';
+    },
+    getSVGData: () => {
+      const svgPaths = paths.map(path => {
+        if (path.points.length < 2) return '';
+        const d = `M ${path.points[0].x} ${path.points[0].y} ` + 
+                  path.points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
+        return `<path d="${d}" stroke="${path.color}" stroke-width="${path.width}" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+      }).join('\n');
+
+      return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="white" />
+  ${svgPaths}
+</svg>`;
     }
   }));
 
@@ -133,8 +148,19 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    let clientX, clientY;
+    if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ('changedTouches' in e && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
+    }
+
     return {
       x: (clientX - rect.left) * (canvas.width / rect.width),
       y: (clientY - rect.top) * (canvas.height / rect.height)
@@ -142,7 +168,7 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
   };
 
   return (
-    <div className="bg-white border-2 border-slate-200 rounded-lg shadow-sm cursor-crosshair overflow-hidden">
+    <div className="bg-white border-2 border-slate-200 rounded-lg shadow-sm cursor-crosshair overflow-hidden touch-none">
       <canvas
         ref={canvasRef}
         width={width}
@@ -151,10 +177,20 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseOut={stopDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={draw}
-        onTouchEnd={stopDrawing}
-        className="w-full h-auto block"
+        onTouchStart={(e) => {
+          if (e.cancelable) e.preventDefault();
+          startDrawing(e);
+        }}
+        onTouchMove={(e) => {
+          if (e.cancelable) e.preventDefault();
+          draw(e);
+        }}
+        onTouchEnd={(e) => {
+          if (e.cancelable) e.preventDefault();
+          stopDrawing();
+        }}
+        className="w-full h-auto block touch-none"
+        style={{ touchAction: 'none' }}
       />
     </div>
   );

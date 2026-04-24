@@ -48,7 +48,9 @@ export default function App() {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const [copyImage, setCopyImage] = useState<string | null>(null);
+  const [copySvg, setCopySvg] = useState<string | null>(null);
   const [memoryImage, setMemoryImage] = useState<string | null>(null);
+  const [memorySvg, setMemorySvg] = useState<string | null>(null);
   const [copyScores, setCopyScores] = useState<Record<number, number>>({});
   const [memoryScores, setMemoryScores] = useState<Record<number, number>>({});
   const [copyTime, setCopyTime] = useState(0);
@@ -58,6 +60,12 @@ export default function App() {
   const [noteValues, setNoteValues] = useState<Record<number, string>>({});
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  const [patientInfo, setPatientInfo] = useState({
+    name: 'أحمد بن محمد',
+    age: '12',
+    notes: 'لا توجد ملاحظات سابقة'
+  });
   
   const canvasRef = useRef<CanvasHandle>(null);
 
@@ -72,6 +80,9 @@ export default function App() {
       const savedStrategy = localStorage.getItem('rcft_copy_strategy');
       const savedCopyTime = localStorage.getItem('rcft_copy_time');
       const savedMemoryTime = localStorage.getItem('rcft_memory_time');
+      const savedPatientInfo = localStorage.getItem('rcft_patient_info');
+      const savedCopySvg = localStorage.getItem('rcft_copy_svg');
+      const savedMemorySvg = localStorage.getItem('rcft_memory_svg');
 
       if (savedCopyScores) setCopyScores(JSON.parse(savedCopyScores));
       if (savedMemoryScores) setMemoryScores(JSON.parse(savedMemoryScores));
@@ -81,12 +92,19 @@ export default function App() {
       if (savedStrategy && savedStrategy !== 'null') setCopyStrategy(Number(savedStrategy));
       if (savedCopyTime) setCopyTime(Number(savedCopyTime));
       if (savedMemoryTime) setMemoryTime(Number(savedMemoryTime));
+      if (savedPatientInfo) setPatientInfo(JSON.parse(savedPatientInfo));
+      if (savedCopySvg) setCopySvg(savedCopySvg);
+      if (savedMemorySvg) setMemorySvg(savedMemorySvg);
     } catch (e) {
       console.error("Failed to load state from localStorage:", e);
     }
   }, []);
 
   // Save to Local Storage on changes
+  useEffect(() => {
+    localStorage.setItem('rcft_patient_info', JSON.stringify(patientInfo));
+  }, [patientInfo]);
+
   useEffect(() => {
     localStorage.setItem('rcft_copy_scores', JSON.stringify(copyScores));
   }, [copyScores]);
@@ -135,6 +153,14 @@ export default function App() {
     };
   }, [isActive]);
 
+  useEffect(() => {
+    localStorage.setItem('rcft_copy_svg', copySvg || '');
+  }, [copySvg]);
+
+  useEffect(() => {
+    localStorage.setItem('rcft_memory_svg', memorySvg || '');
+  }, [memorySvg]);
+
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
@@ -150,7 +176,9 @@ export default function App() {
         setNoteValues({});
         setAnalysis(null);
         setCopyImage(null);
+        setCopySvg(null);
         setMemoryImage(null);
+        setMemorySvg(null);
         setCopyTime(0);
         setMemoryTime(0);
         setSeconds(0);
@@ -172,8 +200,10 @@ export default function App() {
 
   const handleNextPhase = () => {
     const dataUrl = canvasRef.current?.getDataUrl();
+    const svgData = canvasRef.current?.getSVGData();
     if (phase === 'copy') {
       setCopyImage(dataUrl || null);
+      setCopySvg(svgData || null);
       setCopyTime(seconds);
       setIsActive(false);
       setSeconds(0); // Reset for memory phase
@@ -181,6 +211,7 @@ export default function App() {
       setPhase('instructions');
     } else if (phase === 'memory') {
       setMemoryImage(dataUrl || null);
+      setMemorySvg(svgData || null);
       setMemoryTime(seconds);
       setIsActive(false);
       setPhase('results');
@@ -202,7 +233,9 @@ export default function App() {
       setNoteValues({});
       setAnalysis(null);
       setCopyImage(null);
+      setCopySvg(null);
       setMemoryImage(null);
+      setMemorySvg(null);
       setCopyTime(0);
       setMemoryTime(0);
       setCopyStrategy(null);
@@ -225,6 +258,19 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const downloadSVG = (svgContent: string | null, filename: string) => {
+    if (!svgContent) return;
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const Header = () => (
@@ -251,10 +297,25 @@ export default function App() {
         </button>
         <div className="text-right hidden sm:block">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">المفحوص</p>
-          <p className="font-semibold text-slate-700 flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <input 
+              type="text" 
+              value={patientInfo.name} 
+              onChange={(e) => setPatientInfo(p => ({ ...p, name: e.target.value }))}
+              className="font-semibold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-200 outline-none focus:border-indigo-500 transition-all text-xs text-right"
+              placeholder="اسم المفحوص"
+            />
+            <span className="text-slate-300">|</span>
+            <input 
+              type="number" 
+              value={patientInfo.age} 
+              onChange={(e) => setPatientInfo(p => ({ ...p, age: e.target.value }))}
+              className="w-10 font-semibold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-200 outline-none focus:border-indigo-500 transition-all text-xs text-center"
+              placeholder="السن"
+            />
+            <span className="text-[10px] text-slate-400">سنة</span>
             <User size={14} className="text-slate-400" />
-            أحمد بن محمد (12 سنة)
-          </p>
+          </div>
         </div>
         <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
         <button 
@@ -708,14 +769,24 @@ export default function App() {
                   </div>
                 )}
                 {copyImage && (
-                  <button 
-                    onClick={() => downloadImage(copyImage, `rey_figure_${figureType}_copy.png`)}
-                    className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-indigo-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
-                    title="تحميل رسم النقل"
-                  >
-                    <Download size={14} />
-                    تحميل PNG
-                  </button>
+                  <div className="absolute bottom-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={() => downloadImage(copyImage, `rey_figure_${figureType}_copy.png`)}
+                      className="bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-indigo-600 flex items-center gap-2 text-xs font-bold hover:bg-white"
+                      title="تحميل PNG"
+                    >
+                      <Download size={14} />
+                      PNG
+                    </button>
+                    <button 
+                      onClick={() => downloadSVG(copySvg, `rey_figure_${figureType}_copy.svg`)}
+                      className="bg-indigo-600 p-2 rounded-xl shadow-lg text-white flex items-center gap-2 text-xs font-bold hover:bg-indigo-700"
+                      title="تحميل SVG (شعاعي)"
+                    >
+                      <Download size={14} />
+                      SVG
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -733,14 +804,24 @@ export default function App() {
                   </div>
                 )}
                 {memoryImage && (
-                  <button 
-                    onClick={() => downloadImage(memoryImage, `rey_figure_${figureType}_memory.png`)}
-                    className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-purple-600 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 text-xs font-bold"
-                    title="تحميل رسم التذكر"
-                  >
-                    <Download size={14} />
-                    تحميل PNG
-                  </button>
+                  <div className="absolute bottom-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={() => downloadImage(memoryImage, `rey_figure_${figureType}_memory.png`)}
+                      className="bg-white/90 backdrop-blur-sm p-2 rounded-xl border border-slate-200 shadow-lg text-purple-600 flex items-center gap-2 text-xs font-bold hover:bg-white"
+                      title="تحميل PNG"
+                    >
+                      <Download size={14} />
+                      PNG
+                    </button>
+                    <button 
+                      onClick={() => downloadSVG(memorySvg, `rey_figure_${figureType}_memory.svg`)}
+                      className="bg-purple-600 p-2 rounded-xl shadow-lg text-white flex items-center gap-2 text-xs font-bold hover:bg-purple-700"
+                      title="تحميل SVG (شعاعي)"
+                    >
+                      <Download size={14} />
+                      SVG
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -979,18 +1060,34 @@ export default function App() {
                 </div>
                 <div className="h-10 w-px bg-slate-800"></div>
                 <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">الرتبة المئينية (تقديرية)</p>
-                  <p className="text-xl font-bold text-indigo-400">---</p>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">حمولة الدرجة (Copy/Memory)</p>
+                  <p className="text-xl font-bold text-indigo-400">
+                    {(((Object.values(memoryScores) as number[]).reduce((a, b) => a + b, 0) / (Object.values(copyScores) as number[]).reduce((a, b) => a + b, 0)) * 100).toFixed(0)}%
+                  </p>
                 </div>
               </div>
               
-              <button 
-                onClick={() => window.print()}
-                className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-slate-100 transition-all flex items-center gap-3 shadow-xl"
-              >
-                <Save size={20} />
-                تصدير التقرير النهائي
-              </button>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">الحالة التقديرية</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                      (Object.values(copyScores) as number[]).reduce((a, b) => a + b, 0) > (figureType === 'A' ? 30 : 18) 
+                      ? 'bg-green-500/20 text-green-400' 
+                      : 'bg-orange-500/20 text-orange-400'
+                    }`}>
+                      {(Object.values(copyScores) as number[]).reduce((a, b) => a + b, 0) > (figureType === 'A' ? 30 : 18) ? 'أداء طبيعي' : 'يتطلب متابعة'}
+                    </span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => window.print()}
+                  className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-slate-100 transition-all flex items-center gap-3 shadow-xl"
+                >
+                  <Save size={20} />
+                  تصدير التقرير النهائي
+                </button>
+              </div>
             </div>
           </div>
         </div>
