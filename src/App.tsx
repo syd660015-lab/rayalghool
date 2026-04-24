@@ -154,6 +154,19 @@ export default function App() {
   }, [isActive]);
 
   useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isActive && (phase === 'copy' || phase === 'memory')) {
+        e.preventDefault();
+        e.returnValue = 'هل أنت متأكد من رغبتك في مغادرة الاختبار؟ سيؤدي ذلك إلى فقدان البيانات غير المحفوظة.';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isActive, phase]);
+
+  useEffect(() => {
     localStorage.setItem('rcft_copy_svg', copySvg || '');
   }, [copySvg]);
 
@@ -227,7 +240,11 @@ export default function App() {
   };
 
   const clearAllData = () => {
-    if (confirm('هل أنت متأكد من مسح جميع البيانات المخزنة؟')) {
+    const message = isActive && (phase === 'copy' || phase === 'memory')
+      ? 'الاختبار لا يزال جارياً. هل أنت متأكد من مسح جميع البيانات؟ سيؤدي ذلك لإنهاء الاختبار الحالي.'
+      : 'هل أنت متأكد من مسح جميع البيانات المخزنة؟';
+    
+    if (confirm(message)) {
       setCopyScores({});
       setMemoryScores({});
       setNoteValues({});
@@ -320,7 +337,10 @@ export default function App() {
         <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
         <button 
           onClick={() => {
-            if (confirm('هل أنت متأكد من رغبتك في إنهاء الجلسة؟')) {
+            const message = isActive && (phase === 'copy' || phase === 'memory')
+              ? 'تنبيه: الاختبار لا يزال جارياً. هل أنت متأكد من رغبتك في إنهاء الجلسة؟ سيتم فقدان الوقت الحالي.'
+              : 'هل أنت متأكد من رغبتك في إنهاء الجلسة؟';
+            if (confirm(message)) {
               window.location.reload();
             }
           }}
