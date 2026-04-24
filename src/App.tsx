@@ -67,6 +67,8 @@ export default function App() {
   const [showReport, setShowReport] = useState(false);
   
   const [isDetectingStrategy, setIsDetectingStrategy] = useState(false);
+  const [showWaitTimer, setShowWaitTimer] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(180); // 3 minutes standard
   
   const [patientInfo, setPatientInfo] = useState<PatientDemographics>({
     name: '',
@@ -111,6 +113,17 @@ export default function App() {
       console.error("Failed to load state from localStorage:", e);
     }
   }, []);
+
+  // Interval timer for wait phase
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (showWaitTimer && waitSeconds > 0) {
+      interval = setInterval(() => {
+        setWaitSeconds(s => s - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showWaitTimer, waitSeconds]);
 
   // Save to Local Storage on changes
   useEffect(() => {
@@ -263,7 +276,8 @@ export default function App() {
 
       setIsActive(false);
       setSeconds(0); // Reset for memory phase
-      // We don't automatically go to memory, the user clicks "Start Memory Phase" in instructions
+      setShowWaitTimer(true); // Show wait reminder
+      setWaitSeconds(180);
       setPhase('instructions');
     } else if (phase === 'memory') {
       setMemoryImage(dataUrl || null);
@@ -530,32 +544,59 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex gap-4">
-              {!copyImage ? (
-                <button 
-                  onClick={() => setPhase('demographics')}
-                  className="sleek-button-primary flex items-center gap-3 scale-110"
-                >
-                  <Play size={20} fill="currentColor" />
-                  بدء الاختبار (تسجيل البيانات)
-                </button>
-              ) : !memoryImage ? (
-                <button 
-                  onClick={() => startTest('memory')}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-xl font-bold text-lg shadow-lg shadow-purple-200 transition-all flex items-center gap-3"
-                >
-                  <Brain size={24} />
-                  بدء مرحلة التذكر
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setPhase('results')}
-                  className="sleek-button-primary"
-                >
-                  عرض النتائج والتقييم النهائي
-                </button>
-              )}
-            </div>
+          <div className="flex gap-4">
+            {showWaitTimer && waitSeconds > 0 ? (
+              <div className="flex flex-col items-center gap-4 bg-orange-50 p-6 rounded-3xl border border-orange-100 animate-in fade-in zoom-in">
+                <div className="flex items-center gap-3 text-orange-600">
+                  <Timer size={24} className="animate-pulse" />
+                  <span className="font-black text-xl">فترة الانتظار المعيارية (3 دقائق)</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-mono font-black text-orange-700">{Math.floor(waitSeconds / 60)}:{(waitSeconds % 60).toString().padStart(2, '0')}</span>
+                  <span className="text-sm font-bold text-orange-400">متبقي</span>
+                </div>
+                <div className="flex gap-4 mt-2">
+                   <button 
+                    onClick={() => setWaitSeconds(0)}
+                    className="text-orange-500 text-[10px] font-bold hover:underline"
+                  >
+                    تخطي الانتظار
+                  </button>
+                  <button 
+                    onClick={() => startTest('memory')}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-xl font-bold text-md shadow-lg shadow-purple-200 transition-all flex items-center gap-3"
+                  >
+                    <Brain size={20} />
+                    بدء مرحلة التذكر الآن
+                  </button>
+                </div>
+              </div>
+            ) : !copyImage ? (
+              <button 
+                onClick={() => setPhase('demographics')}
+                className="sleek-button-primary flex items-center gap-3 scale-110"
+              >
+                <Play size={20} fill="currentColor" />
+                بدء الاختبار (تسجيل البيانات)
+              </button>
+            ) : !memoryImage ? (
+              <button 
+                onClick={() => startTest('memory')}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-xl font-bold text-lg shadow-lg shadow-purple-200 transition-all flex items-center gap-3 scale-110"
+              >
+                <Brain size={24} />
+                بدء مرحلة التذكر
+              </button>
+            ) : (
+              <button 
+                onClick={() => setPhase('results')}
+                className="sleek-button-primary flex items-center gap-3 scale-110"
+              >
+                <ArrowLeft size={24} />
+                عرض النتائج والتقييم النهائي
+              </button>
+            )}
+          </div>
             
             <p className="text-slate-400 text-sm flex items-center gap-2">
               <Info size={16} />
@@ -1024,7 +1065,17 @@ export default function App() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative">
+              <div className="absolute top-4 left-6 z-20 hidden lg:block opacity-20 hover:opacity-100 transition-opacity">
+                <div className="bg-white p-2 rounded-xl shadow-xl border border-slate-200">
+                  <p className="text-[8px] font-bold text-slate-400 mb-1 text-center">المرجع</p>
+                  <img 
+                    src={figureType === 'A' ? "https://i.ibb.co/nscS0sxy/image.png" : "https://i.ibb.co/0jNpxVMR/figure-b.png"} 
+                    alt="Ref"
+                    className="w-32 h-auto rounded"
+                  />
+                </div>
+              </div>
               <table className="w-full text-right">
                 <thead>
                   <tr className="bg-slate-100/50 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-100">

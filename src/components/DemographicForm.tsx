@@ -7,7 +7,8 @@ import {
   Hand, 
   Briefcase,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import { PatientDemographics } from '../types';
 
@@ -239,6 +240,22 @@ export function DemographicForm({ data, onChange, onComplete, onBack }: Demograp
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Notes Field */}
+      <div className="sleek-card p-6 space-y-6">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-2">
+          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600">
+            <FileText size={20} />
+          </div>
+          <h3 className="font-bold text-lg">ملاحظات إضافية / التاريخ المرضي</h3>
+        </div>
+        <textarea 
+          value={data.notes}
+          onChange={(e) => updateField('notes', e.target.value)}
+          placeholder="أدخل أي ملاحظات سريرية أو تاريخ مرضي ذي صلة..."
+          className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-slate-400 outline-none transition-all resize-none text-right"
+        />
       </div>
 
       <div className="flex justify-between items-center py-6 border-t border-slate-100">
