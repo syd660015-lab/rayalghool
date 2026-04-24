@@ -30,6 +30,7 @@ import DrawingCanvas, { CanvasHandle } from './components/DrawingCanvas';
 import { FigureIcon } from './components/FigureIcon';
 import { ClinicalReport } from './components/ClinicalReport';
 import { FigureAnimation } from './components/FigureAnimation';
+import { DemographicForm } from './components/DemographicForm';
 import { analyzeExaminerNotes, AnalysisResult, analyzeDrawingStrategy } from './services/geminiService';
 import { 
   REY_FIGURE_A_ELEMENTS, 
@@ -37,7 +38,8 @@ import {
   PEN_COLORS, 
   TestPhase, 
   ScoreItem,
-  FigureType
+  FigureType,
+  PatientDemographics
 } from './types';
 
 export default function App() {
@@ -66,10 +68,15 @@ export default function App() {
   
   const [isDetectingStrategy, setIsDetectingStrategy] = useState(false);
   
-  const [patientInfo, setPatientInfo] = useState({
-    name: 'أحمد بن محمد',
-    age: '12',
-    notes: 'لا توجد ملاحظات سابقة'
+  const [patientInfo, setPatientInfo] = useState<PatientDemographics>({
+    name: '',
+    gender: '',
+    birthDate: { day: '', month: '', year: '' },
+    education: { level: '', specialization: '', otherDetail: '' },
+    handedness: '',
+    employment: { type: '', detail: '' },
+    age: '',
+    notes: ''
   });
   
   const canvasRef = useRef<CanvasHandle>(null);
@@ -213,6 +220,15 @@ export default function App() {
   };
 
   const startTest = (nextPhase: TestPhase) => {
+    // Calculate age if birth year is present and age is default or empty
+    if (patientInfo.birthDate.year && (!patientInfo.age || patientInfo.age === '12')) {
+      const currentYear = new Date().getFullYear();
+      const calculatedAge = currentYear - parseInt(patientInfo.birthDate.year);
+      if (!isNaN(calculatedAge)) {
+        setPatientInfo(prev => ({ ...prev, age: String(calculatedAge) }));
+      }
+    }
+
     setPhase(nextPhase);
     setSeconds(0);
     setIsActive(true);
@@ -342,23 +358,24 @@ export default function App() {
         <div className="text-right hidden sm:block">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">المفحوص</p>
           <div className="flex items-center gap-2">
-            <input 
-              type="text" 
-              value={patientInfo.name} 
-              onChange={(e) => setPatientInfo(p => ({ ...p, name: e.target.value }))}
-              className="font-semibold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-200 outline-none focus:border-indigo-500 transition-all text-xs text-right"
-              placeholder="اسم المفحوص"
-            />
+            <span className="font-semibold text-slate-700 text-xs text-right">
+              {patientInfo.name || 'لم يتم تسجيل الاسم'}
+            </span>
             <span className="text-slate-300">|</span>
-            <input 
-              type="number" 
-              value={patientInfo.age} 
-              onChange={(e) => setPatientInfo(p => ({ ...p, age: e.target.value }))}
-              className="w-10 font-semibold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-200 outline-none focus:border-indigo-500 transition-all text-xs text-center"
-              placeholder="السن"
-            />
+            <span className="font-semibold text-slate-700 text-xs text-center">
+              {patientInfo.age || '??'}
+            </span>
             <span className="text-[10px] text-slate-400">سنة</span>
             <User size={14} className="text-slate-400" />
+            {phase === 'instructions' && !isActive && (
+              <button 
+                onClick={() => setPhase('demographics')}
+                className="ml-2 p-1 hover:bg-slate-100 rounded-lg text-indigo-600 transition-colors"
+                title="تعديل البيانات الديموغرافية"
+              >
+                <FileText size={14} />
+              </button>
+            )}
           </div>
         </div>
         <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
@@ -378,6 +395,20 @@ export default function App() {
         </button>
       </div>
     </header>
+  );
+
+  const renderDemographics = () => (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Header />
+      <motion.main className="flex-1 overflow-auto p-4 sm:p-8">
+        <DemographicForm 
+          data={patientInfo}
+          onChange={setPatientInfo}
+          onBack={() => setPhase('instructions')}
+          onComplete={() => startTest('copy')}
+        />
+      </motion.main>
+    </div>
   );
 
   const renderInstructions = () => (
@@ -497,11 +528,11 @@ export default function App() {
             <div className="flex gap-4">
               {!copyImage ? (
                 <button 
-                  onClick={() => startTest('copy')}
+                  onClick={() => setPhase('demographics')}
                   className="sleek-button-primary flex items-center gap-3 scale-110"
                 >
                   <Play size={20} fill="currentColor" />
-                  بدء مرحلة النقل المباشر
+                  بدء الاختبار (تسجيل البيانات)
                 </button>
               ) : !memoryImage ? (
                 <button 
@@ -1168,6 +1199,7 @@ export default function App() {
     <div className="min-h-screen font-sans selection:bg-indigo-100 selection:text-indigo-600">
       <AnimatePresence mode="wait">
         {phase === 'instructions' && renderInstructions()}
+        {phase === 'demographics' && renderDemographics()}
         {(phase === 'copy' || phase === 'memory') && renderTestPhase()}
         {phase === 'results' && renderResults()}
       </AnimatePresence>

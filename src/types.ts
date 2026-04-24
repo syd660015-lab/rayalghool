@@ -7,7 +7,7 @@ export interface DrawingPoint {
   isNewPath?: boolean;
 }
 
-export type TestPhase = 'instructions' | 'copy' | 'memory' | 'results';
+export type TestPhase = 'instructions' | 'demographics' | 'copy' | 'memory' | 'results';
 
 export interface ScoreItem {
   id: number;
@@ -17,6 +17,28 @@ export interface ScoreItem {
 }
 
 export type FigureType = 'A' | 'B';
+
+export interface PatientDemographics {
+  name: string;
+  gender: 'male' | 'female' | '';
+  birthDate: {
+    day: string;
+    month: string;
+    year: string;
+  };
+  education: {
+    level: string;
+    specialization: string;
+    otherDetail: string;
+  };
+  handedness: 'left' | 'right' | '';
+  employment: {
+    type: string;
+    detail: string;
+  };
+  age?: string;
+  notes?: string;
+}
 
 export interface FigureElement {
   id: number;

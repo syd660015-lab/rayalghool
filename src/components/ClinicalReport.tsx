@@ -18,15 +18,12 @@ import { AnalysisResult } from '../services/geminiService';
 import { 
   FigureType, 
   REY_FIGURE_A_ELEMENTS, 
-  REY_FIGURE_B_ELEMENTS 
+  REY_FIGURE_B_ELEMENTS,
+  PatientDemographics
 } from '../types';
 
 interface ClinicalReportProps {
-  patientInfo: {
-    name: string;
-    age: string;
-    notes: string;
-  };
+  patientInfo: PatientDemographics;
   figureType: FigureType;
   copyImage: string | null;
   memoryImage: string | null;
@@ -45,6 +42,24 @@ const STRATEGY_LABELS: Record<number, string> = {
   3: "تجزئة الشكل إلى أجزاء",
   4: "رسم تفصيلي تدريجي",
   5: "رسم عشوائي غير منظم"
+};
+
+const EDUCATION_LABELS: Record<string, string> = {
+  basic: "تعليم أساسي (ابتدائي/إعدادي)",
+  secondary: "ثانوي (عام/فني)",
+  intermediate: "فوق متوسط (معهد سنتين)",
+  university: "جامعي (بكالوريوس/ليسانس)",
+  master: "ماجستير",
+  doctorate: "دكتوراه",
+  other: "أخرى"
+};
+
+const EMPLOYMENT_LABELS: Record<string, string> = {
+  student: "طالب متفرغ",
+  working_student: "طالب (ويعمل)",
+  full_time: "موظف/عامل (تفرغ كامل)",
+  part_time: "موظف/عامل (عمل جزئي)",
+  none: "لا يعمل / أخرى"
 };
 
 export const ClinicalReport: React.FC<ClinicalReportProps> = ({
@@ -142,20 +157,78 @@ export const ClinicalReport: React.FC<ClinicalReportProps> = ({
             <section>
               <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <User size={20} className="text-indigo-600" />
-                معلومات المفحوص
+                معلومات المفحوص الشاملة
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">الاسم الكامل</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="md:col-span-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">الاسم بالكامل</label>
                   <p className="text-lg font-bold text-slate-800">{patientInfo.name}</p>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">العمر</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">النوع</label>
+                  <p className="text-lg font-bold text-slate-800">{patientInfo.gender === 'male' ? 'ذكر' : 'أنثى'}</p>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">العمر المعتمد</label>
                   <p className="text-lg font-bold text-slate-800">{patientInfo.age} سنة</p>
                 </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">تاريخ الميلاد</label>
+                  <p className="text-lg font-bold text-slate-800">
+                    {patientInfo.birthDate.day} / {patientInfo.birthDate.month} / {patientInfo.birthDate.year}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">السيادة اليدوية</label>
+                  <p className="text-lg font-bold text-slate-800">{patientInfo.handedness === 'right' ? 'اليد اليمنى' : 'اليد اليسرى'}</p>
+                </div>
+
                 <div className="md:col-span-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">المستوى التعليمي</label>
+                  <p className="text-lg font-bold text-slate-800">
+                    {EDUCATION_LABELS[patientInfo.education.level] || 'غير محدد'}
+                    {patientInfo.education.specialization && ` - تخصص: ${patientInfo.education.specialization}`}
+                    {patientInfo.education.otherDetail && ` - ${patientInfo.education.otherDetail}`}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">الحالة العملية</label>
+                  <p className="text-lg font-bold text-slate-800">
+                    {EMPLOYMENT_LABELS[patientInfo.employment.type] || 'غير محدد'}
+                    {patientInfo.employment.detail && ` (${patientInfo.employment.detail})`}
+                  </p>
+                </div>
+
+                <div className="md:col-span-3">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">ملاحظات إضافية</label>
                   <p className="text-slate-700 leading-relaxed font-medium mt-1">{patientInfo.notes || 'لا يوجد'}</p>
+                </div>
+              </div>
+
+              {/* Administration Section */}
+              <div className="mt-6 bg-slate-100 p-6 rounded-2xl border-2 border-slate-300 border-dashed">
+                <div className="flex items-center gap-2 mb-4 text-slate-500">
+                  <CheckCircle2 size={18} />
+                  <h3 className="text-sm font-bold uppercase tracking-wider">خاص بالإدارة (Administration Only)</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">تاريخ إجراء الاختبار</label>
+                    <p className="text-md font-bold text-slate-700">{currentDate}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">تاريخ الميلاد المعتمد</label>
+                    <p className="text-md font-bold text-slate-700">
+                      {patientInfo.birthDate.day && patientInfo.birthDate.month && patientInfo.birthDate.year 
+                        ? `${patientInfo.birthDate.day} / ${patientInfo.birthDate.month} / ${patientInfo.birthDate.year}` 
+                        : 'غير مسجل'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">السن (بالسنوات)</label>
+                    <p className="text-md font-bold text-slate-700">{patientInfo.age} سنة</p>
+                  </div>
                 </div>
               </div>
             </section>
