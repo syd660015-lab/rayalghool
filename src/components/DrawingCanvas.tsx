@@ -5,6 +5,7 @@ interface CanvasProps {
   lineWidth: number;
   width?: number;
   height?: number;
+  elapsedTime?: number;
 }
 
 export interface CanvasHandle {
@@ -14,12 +15,18 @@ export interface CanvasHandle {
   getSVGData: () => string;
 }
 
-const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lineWidth, width = 800, height = 600 }, ref) => {
+const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lineWidth, width = 800, height = 600, elapsedTime }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [paths, setPaths] = useState<{ points: {x: number, y: number}[], color: string, width: number }[]>([]);
   const lastPointRef = useRef<{ x: number, y: number } | null>(null);
   const requestRef = useRef<number | null>(null);
+
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     redraw(paths);
@@ -168,7 +175,7 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
   };
 
   return (
-    <div className="bg-white border-2 border-slate-200 rounded-lg shadow-sm cursor-crosshair overflow-hidden touch-none">
+    <div className="bg-white border-2 border-slate-200 rounded-lg shadow-sm cursor-crosshair overflow-hidden touch-none relative">
       <canvas
         ref={canvasRef}
         width={width}
@@ -192,6 +199,11 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
         className="w-full h-auto block touch-none"
         style={{ touchAction: 'none' }}
       />
+      {elapsedTime !== undefined && (
+        <div className="absolute bottom-3 right-3 bg-slate-900/10 backdrop-blur-sm px-2 py-1 rounded-md pointer-events-none">
+          <span className="font-mono text-xs font-bold text-slate-500">{formatTime(elapsedTime)}</span>
+        </div>
+      )}
     </div>
   );
 });

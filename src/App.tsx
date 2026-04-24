@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import DrawingCanvas, { CanvasHandle } from './components/DrawingCanvas';
 import { FigureIcon } from './components/FigureIcon';
+import { ClinicalReport } from './components/ClinicalReport';
+import { FigureAnimation } from './components/FigureAnimation';
 import { analyzeExaminerNotes, AnalysisResult } from './services/geminiService';
 import { 
   REY_FIGURE_A_ELEMENTS, 
@@ -60,6 +62,7 @@ export default function App() {
   const [noteValues, setNoteValues] = useState<Record<number, string>>({});
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   
   const [patientInfo, setPatientInfo] = useState({
     name: 'أحمد بن محمد',
@@ -371,33 +374,45 @@ export default function App() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="sleek-card p-8 group hover:border-indigo-200 transition-all">
-              <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <ClipboardCheck className="text-indigo-600" size={28} />
-              </div>
-              <h3 className="text-xl font-bold mb-4">المرحلة الأولى: النقل المباشر</h3>
-              <p className="text-slate-600 leading-relaxed mb-6">
-                يقوم المفحوص بنقل النموذج الأصلي مع تتبع تسلسل الرسم من خلال تغيير ألوان الأقلام (5 ألوان).
-              </p>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-500">
-                • تقييم الإدراك البصري التكويني<br/>
-                • تتبع نمط الرسم (عقلاني، جزئي، شامل)
+            <div className="space-y-6">
+              <div className="sleek-card p-8 group hover:border-indigo-200 transition-all h-full">
+                <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <ClipboardCheck className="text-indigo-600" size={28} />
+                </div>
+                <h3 className="text-xl font-bold mb-4">المرحلة الأولى: النقل المباشر</h3>
+                <p className="text-slate-600 leading-relaxed mb-6">
+                  يقوم المفحوص بنقل النموذج الأصلي مع تتبع تسلسل الرسم من خلال تغيير ألوان الأقلام (5 ألوان).
+                </p>
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-500">
+                  • تقييم الإدراك البصري التكويني<br/>
+                  • تتبع نمط الرسم (عقلاني، جزئي، شامل)
+                </div>
               </div>
             </div>
 
-            <div className="sleek-card p-8 group hover:border-purple-200 transition-all">
-              <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Brain className="text-purple-600" size={28} />
-              </div>
-              <h3 className="text-xl font-bold mb-4">المرحلة الثانية: التذكر</h3>
-              <p className="text-slate-600 leading-relaxed mb-6">
-                إعادة رسم الشكل من الذاكرة بعد فترة راحة قصيرة (3 دقائق) دون الاستعانة بالنموذج.
-              </p>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-500">
-                • تقييم الذاكرة بعيدة المدى<br/>
-                • جودة التخزين والاسترجاع المعلوماتي
+            <div className="space-y-6">
+              <div className="sleek-card p-8 group hover:border-purple-200 transition-all h-full">
+                <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Brain className="text-purple-600" size={28} />
+                </div>
+                <h3 className="text-xl font-bold mb-4">المرحلة الثانية: التذكر</h3>
+                <p className="text-slate-600 leading-relaxed mb-6">
+                  إعادة رسم الشكل من الذاكرة بعد فترة راحة قصيرة (3 دقائق) دون الاستعانة بالنموذج.
+                </p>
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-500">
+                  • تقييم الذاكرة بعيدة المدى<br/>
+                  • جودة التخزين والاسترجاع المعلوماتي
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-6 py-10 border-t border-slate-200">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800">استعراض تفاعلي لمكونات النماذج</h3>
+              <p className="text-sm text-slate-500">شاهد عرضاً متحركاً لكيفية بناء الأشكال المعقدة</p>
+            </div>
+            <FigureAnimation type={figureType} />
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 py-8 border-t border-slate-200">
@@ -608,7 +623,7 @@ export default function App() {
 
           <div className="flex-1 flex gap-6 overflow-hidden relative">
             <div className={`flex-1 sleek-card relative overflow-hidden flex items-center justify-center p-4 transition-all duration-300 ${isExpanded ? 'fixed inset-0 z-50 bg-slate-50 p-10' : ''}`}>
-              <DrawingCanvas ref={canvasRef} currentColor={currentColor} lineWidth={lineWidth} width={isExpanded ? 1200 : 800} height={isExpanded ? 900 : 600} />
+              <DrawingCanvas ref={canvasRef} currentColor={currentColor} lineWidth={lineWidth} width={isExpanded ? 1200 : 800} height={isExpanded ? 900 : 600} elapsedTime={seconds} />
               
               <div className="absolute top-6 right-6 flex gap-2">
                 <span className="px-3 py-1 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-tight shadow-sm flex items-center gap-1">
@@ -1101,11 +1116,11 @@ export default function App() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => window.print()}
+                  onClick={() => setShowReport(true)}
                   className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-slate-100 transition-all flex items-center gap-3 shadow-xl"
                 >
-                  <Save size={20} />
-                  تصدير التقرير النهائي
+                  <FileText size={20} />
+                  عرض التقرير السريري الموحد
                 </button>
               </div>
             </div>
@@ -1121,6 +1136,24 @@ export default function App() {
         {phase === 'instructions' && renderInstructions()}
         {(phase === 'copy' || phase === 'memory') && renderTestPhase()}
         {phase === 'results' && renderResults()}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReport && (
+          <ClinicalReport 
+            patientInfo={patientInfo}
+            figureType={figureType}
+            copyImage={copyImage}
+            memoryImage={memoryImage}
+            copyScores={copyScores}
+            memoryScores={memoryScores}
+            copyTime={copyTime}
+            memoryTime={memoryTime}
+            copyStrategy={copyStrategy}
+            analysis={analysis}
+            onClose={() => setShowReport(false)}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
