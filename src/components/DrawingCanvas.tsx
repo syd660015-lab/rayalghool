@@ -8,11 +8,19 @@ interface CanvasProps {
   elapsedTime?: number;
 }
 
+export interface StrokeData {
+  id: number;
+  color: string;
+  points: { x: number; y: number }[];
+  bounds: { minX: number; minY: number; maxX: number; maxY: number };
+}
+
 export interface CanvasHandle {
   clear: () => void;
   undo: () => void;
   getDataUrl: () => string;
   getSVGData: () => string;
+  getStrokeData: () => StrokeData[];
 }
 
 const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lineWidth, width = 800, height = 600, elapsedTime }, ref) => {
@@ -65,6 +73,24 @@ const DrawingCanvas = forwardRef<CanvasHandle, CanvasProps>(({ currentColor, lin
   <rect width="100%" height="100%" fill="white" />
   ${svgPaths}
 </svg>`;
+    },
+    getStrokeData: () => {
+      return paths.map((path, idx) => {
+        const points = path.points;
+        const xs = points.map(p => p.x);
+        const ys = points.map(p => p.y);
+        return {
+          id: idx,
+          color: path.color,
+          points: points,
+          bounds: {
+            minX: Math.min(...xs),
+            minY: Math.min(...ys),
+            maxX: Math.max(...xs),
+            maxY: Math.max(...ys)
+          }
+        };
+      });
     }
   }));
 

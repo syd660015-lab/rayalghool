@@ -30,7 +30,7 @@ import DrawingCanvas, { CanvasHandle } from './components/DrawingCanvas';
 import { FigureIcon } from './components/FigureIcon';
 import { ClinicalReport } from './components/ClinicalReport';
 import { FigureAnimation } from './components/FigureAnimation';
-import { analyzeExaminerNotes, AnalysisResult } from './services/geminiService';
+import { analyzeExaminerNotes, AnalysisResult, analyzeDrawingStrategy } from './services/geminiService';
 import { 
   REY_FIGURE_A_ELEMENTS, 
   REY_FIGURE_B_ELEMENTS, 
@@ -63,6 +63,8 @@ export default function App() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  
+  const [isDetectingStrategy, setIsDetectingStrategy] = useState(false);
   
   const [patientInfo, setPatientInfo] = useState({
     name: 'أحمد بن محمد',
@@ -117,7 +119,11 @@ export default function App() {
   }, [memoryScores]);
 
   useEffect(() => {
-    localStorage.setItem('rcft_copy_strategy', String(copyStrategy));
+    if (copyStrategy !== null) {
+      localStorage.setItem('rcft_copy_strategy', String(copyStrategy));
+    } else {
+      localStorage.removeItem('rcft_copy_strategy');
+    }
   }, [copyStrategy]);
 
   useEffect(() => {
@@ -139,6 +145,8 @@ export default function App() {
   useEffect(() => {
     if (analysis) {
       localStorage.setItem('rcft_analysis', JSON.stringify(analysis));
+    } else {
+      localStorage.removeItem('rcft_analysis');
     }
   }, [analysis]);
 
@@ -214,13 +222,29 @@ export default function App() {
     }, 100);
   };
 
-  const handleNextPhase = () => {
+  const handleNextPhase = async () => {
     const dataUrl = canvasRef.current?.getDataUrl();
     const svgData = canvasRef.current?.getSVGData();
+    const strokeData = canvasRef.current?.getStrokeData();
+
     if (phase === 'copy') {
       setCopyImage(dataUrl || null);
       setCopySvg(svgData || null);
       setCopyTime(seconds);
+      
+      // Auto-detect strategy
+      if (strokeData && strokeData.length > 0) {
+        setIsDetectingStrategy(true);
+        try {
+          const strategy = await analyzeDrawingStrategy(strokeData, figureType);
+          setCopyStrategy(strategy);
+        } catch (e) {
+          console.error("Auto-strategy detection failed", e);
+        } finally {
+          setIsDetectingStrategy(false);
+        }
+      }
+
       setIsActive(false);
       setSeconds(0); // Reset for memory phase
       // We don't automatically go to memory, the user clicks "Start Memory Phase" in instructions
@@ -755,10 +779,20 @@ export default function App() {
 
             <button 
               onClick={handleNextPhase}
-              className="sleek-button-primary flex items-center gap-2 pr-10 pl-6 group"
+              disabled={isDetectingStrategy}
+              className={`sleek-button-primary flex items-center gap-2 pr-10 pl-6 group ${isDetectingStrategy ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              <span>{phase === 'copy' ? 'إنهاء وحفظ النقل' : 'إنهاء مرحلة التذكر'}</span>
-              <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+              {isDetectingStrategy ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>جاري تحليل النمط...</span>
+                </>
+              ) : (
+                <>
+                  <span>{phase === 'copy' ? 'إنهاء وحفظ النقل' : 'إنهاء مرحلة التذكر'}</span>
+                  <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </div>
         </section>

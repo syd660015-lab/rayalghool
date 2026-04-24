@@ -1,6 +1,17 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let genAI: GoogleGenerativeAI | null = null;
+
+function getAI() {
+  if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please configure it in the Secrets panel.");
+    }
+    genAI = new GoogleGenerativeAI(apiKey);
+  }
+  return genAI;
+}
 
 export interface AnalysisResult {
   summary: string;
@@ -27,38 +38,42 @@ export async function analyzeExaminerNotes(notes: string[], figureType: string, 
   Respond in ARABIC. Avoid using markdown formatting in your response. Return ONLY a JSON object matching the requested schema.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
+    const ai = getAI();
+    const model = ai.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            summary: { type: Type.STRING },
+            summary: { type: SchemaType.STRING },
             themes: {
-              type: Type.ARRAY,
+              type: SchemaType.ARRAY,
               items: {
-                type: Type.OBJECT,
+                type: SchemaType.OBJECT,
                 properties: {
-                  theme: { type: Type.STRING },
-                  count: { type: Type.NUMBER }
+                  theme: { type: SchemaType.STRING },
+                  count: { type: SchemaType.NUMBER }
                 },
                 required: ["theme", "count"]
               }
             },
             clinicalInsights: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING }
             }
           },
           required: ["summary", "themes", "clinicalInsights"]
         }
-      }
+      },
     });
 
-    if (response.text) {
-      const cleanText = response.text.trim()
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (text) {
+      const cleanText = text.trim()
         .replace(/^```json\n?/, "")
         .replace(/\n?```$/, "");
       return JSON.parse(cleanText) as AnalysisResult;
@@ -67,9 +82,60 @@ export async function analyzeExaminerNotes(notes: string[], figureType: string, 
   } catch (error) {
     console.error("AI Analysis Error:", error);
     return {
-      summary: "فشل تحليل الملاحظات بواسطة الذكاء الاصطناعي.",
+      summary: "فشل تحليل الملاحظات بواسطة الذكاء الاصطناعي. تأكد من إعداد مفتاح API الخاص بـ Gemini.",
       themes: [],
       clinicalInsights: []
     };
+  }
+}
+export async function analyzeDrawingStrategy(strokes: any[], figureType: string): Promise<number> {
+  const strokeData = strokes.map(s => ({
+    id: s.id,
+    color: s.color,
+    bounds: s.bounds,
+    pointCount: s.points.length
+  }));
+
+  const prompt = `Analyze the drawing sequence of a Rey Complex Figure Test (Model ${figureType}).
+  The following is a list of strokes in ORDER of drawing:
+  ${JSON.stringify(strokeData)}
+  
+  Based on clinical criteria for Rey Figure Assessment, classify the drawing STRATEGY into one of these types:
+  1: Holistic/Structural (Begins with main large rectangle or outer frame)
+  2: Internal Structure (Starts with internal details or sub-frames before the outer frame)
+  3: Piecemeal (Draws piece by piece adjacent to each other, fragmented but connected)
+  4: Fragmentary (Disjointed, no clear structure or sequence)
+  5: Random/Chaotic (Unorganized strokes all over the place)
+  
+  Return ONLY a JSON object with a single field "strategy" containing the integer (1, 2, 3, 4, or 5).`;
+
+  try {
+    const ai = getAI();
+    const model = ai.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            strategy: { type: SchemaType.NUMBER }
+          },
+          required: ["strategy"]
+        }
+      },
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    if (text) {
+      const parsed = JSON.parse(text);
+      return parsed.strategy || 1;
+    }
+    return 1;
+  } catch (error) {
+    console.error("Strategy Analysis Error:", error);
+    return 1; // Default to type 1
   }
 }
