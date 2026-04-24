@@ -63,23 +63,27 @@ export default function App() {
 
   // Load from Local Storage on mount
   useEffect(() => {
-    const savedCopyScores = localStorage.getItem('rcft_copy_scores');
-    const savedMemoryScores = localStorage.getItem('rcft_memory_scores');
-    const savedNotes = localStorage.getItem('rcft_notes');
-    const savedFigureType = localStorage.getItem('rcft_figure_type');
-    const savedAnalysis = localStorage.getItem('rcft_analysis');
-    const savedStrategy = localStorage.getItem('rcft_copy_strategy');
-    const savedCopyTime = localStorage.getItem('rcft_copy_time');
-    const savedMemoryTime = localStorage.getItem('rcft_memory_time');
+    try {
+      const savedCopyScores = localStorage.getItem('rcft_copy_scores');
+      const savedMemoryScores = localStorage.getItem('rcft_memory_scores');
+      const savedNotes = localStorage.getItem('rcft_notes');
+      const savedFigureType = localStorage.getItem('rcft_figure_type');
+      const savedAnalysis = localStorage.getItem('rcft_analysis');
+      const savedStrategy = localStorage.getItem('rcft_copy_strategy');
+      const savedCopyTime = localStorage.getItem('rcft_copy_time');
+      const savedMemoryTime = localStorage.getItem('rcft_memory_time');
 
-    if (savedCopyScores) setCopyScores(JSON.parse(savedCopyScores));
-    if (savedMemoryScores) setMemoryScores(JSON.parse(savedMemoryScores));
-    if (savedNotes) setNoteValues(JSON.parse(savedNotes));
-    if (savedFigureType) setFigureType(savedFigureType as FigureType);
-    if (savedAnalysis) setAnalysis(JSON.parse(savedAnalysis));
-    if (savedStrategy) setCopyStrategy(Number(savedStrategy));
-    if (savedCopyTime) setCopyTime(Number(savedCopyTime));
-    if (savedMemoryTime) setMemoryTime(Number(savedMemoryTime));
+      if (savedCopyScores) setCopyScores(JSON.parse(savedCopyScores));
+      if (savedMemoryScores) setMemoryScores(JSON.parse(savedMemoryScores));
+      if (savedNotes) setNoteValues(JSON.parse(savedNotes));
+      if (savedFigureType) setFigureType(savedFigureType as FigureType);
+      if (savedAnalysis) setAnalysis(JSON.parse(savedAnalysis));
+      if (savedStrategy && savedStrategy !== 'null') setCopyStrategy(Number(savedStrategy));
+      if (savedCopyTime) setCopyTime(Number(savedCopyTime));
+      if (savedMemoryTime) setMemoryTime(Number(savedMemoryTime));
+    } catch (e) {
+      console.error("Failed to load state from localStorage:", e);
+    }
   }, []);
 
   // Save to Local Storage on changes
@@ -118,15 +122,17 @@ export default function App() {
   }, [analysis]);
 
   useEffect(() => {
-    let interval: any = null;
+    let interval: NodeJS.Timeout | number | undefined;
     if (isActive) {
       interval = setInterval(() => {
         setSeconds(s => s + 1);
       }, 1000);
     } else {
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isActive]);
 
   const formatTime = (totalSeconds: number) => {
@@ -183,7 +189,8 @@ export default function App() {
 
   const runNoteAnalysis = async () => {
     setIsAnalyzing(true);
-    const result = await analyzeExaminerNotes(Object.values(noteValues));
+    const scoresToAnalyze = activeScoringTab === 'copy' ? copyScores : memoryScores;
+    const result = await analyzeExaminerNotes(Object.values(noteValues), figureType, scoresToAnalyze);
     setAnalysis(result);
     setIsAnalyzing(false);
   };

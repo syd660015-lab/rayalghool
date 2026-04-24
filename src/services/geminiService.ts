@@ -8,26 +8,23 @@ export interface AnalysisResult {
   clinicalInsights: string[];
 }
 
-export async function analyzeExaminerNotes(notes: string[]): Promise<AnalysisResult> {
+export async function analyzeExaminerNotes(notes: string[], figureType: string, scores: Record<number, number>): Promise<AnalysisResult> {
   const filteredNotes = notes.filter(n => n && n.trim().length > 0);
-  if (filteredNotes.length === 0) {
-    return {
-      summary: "لا توجد ملاحظات كافية للتحليل.",
-      themes: [],
-      clinicalInsights: []
-    };
-  }
+  const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+  const maxScore = figureType === 'A' ? 36 : 22;
 
-  const prompt = `Analyze the following examiner notes from a Rey Complex Figure Test (RCFT) session.
-  Notes:
-  ${filteredNotes.join("\n")}
+  const prompt = `Analyze a Rey Complex Figure Test (RCFT) session for Model ${figureType}.
+  Total Score: ${totalScore.toFixed(1)} / ${maxScore}
+  
+  Examiner Notes:
+  ${filteredNotes.length > 0 ? filteredNotes.join("\n") : "No specific notes provided."}
   
   Provide:
-  1. A concise summary of the patient's performance based on these notes.
-  2. Identify common themes or recurring patterns in the notes.
+  1. A concise summary of the patient's performance (considering the score and notes).
+  2. Identify common themes or patterns.
   3. Extract clinical insights or recommendations.
   
-  Respond in ARABIC.`;
+  Respond in ARABIC. Avoid using markdown formatting in your response. Return ONLY a JSON object matching the requested schema.`;
 
   try {
     const response = await ai.models.generateContent({
